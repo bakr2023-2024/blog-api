@@ -1,0 +1,14 @@
+doctype html
+html
+  head
+    title= title
+    link(rel='stylesheet', href='/stylesheets/style.css')
+  body
+    h1 Welcome to login form
+    if(messages.error)
+      p=messages.error
+    form#loginForm(method='post',action='/login')
+      input(type='text',name='username',placeholder='username') 
+      input(type='password',name='password',placeholder='password')
+      input(type='submit') 
+    a(href='/register') register instead

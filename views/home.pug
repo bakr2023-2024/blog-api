@@ -1,0 +1,183 @@
+doctype html
+html
+    head
+        title= title
+        link(rel='stylesheet', href='/stylesheets/style.css')
+    body
+        if(messages.error)
+            p=messages.error 
+        if(messages.success)
+            p=messages.success
+        h1 welcome back #{user.username}
+        #userOptions
+            button#createPostBtn Create post
+            button#checkProfileBtn 
+                a(href!='/user/'+user._id) Check Profile
+            button#logoutBtn Logout
+        #postDialog(style="display:none")
+            if(error)
+                p=error
+            form#postForm(data-method='post')
+                input(type='hidden' id='postId' value='')
+                input(type='text' name='title' id='titleInput' placeholder='post title')
+                textarea( name='content' id='contentInput' placeholder='post content')
+                button(type='submit') Post
+                button(type='button' id='cancelPostBtn') Cancel
+        #commentDialog(style="display:none")
+            if(error)
+                p=error
+            form#commentForm(data-method='post')
+                input(type='hidden' name='postId' id='commentPostId' value='')
+                input(type='hidden' name='commentId' id='commentId' value='')
+                textarea( name='text' id='textInput' placeholder='comment')
+                button(type='submit') Comment
+                button(type='button' id='cancelCommentBtn') Cancel
+        if(posts.length>0)
+            #postsContainer 
+                for post in posts 
+                    .post(id=post._id)
+                        .postHeader 
+                            div 
+                                span
+                                    strong.postTitle=post.title 
+                                    a(href!='/user/'+post.author._id)=post.author.username 
+                                    | #{post.createdOn}
+                            if (String(user._id) == String(post.author._id))
+                                div
+                                    button.editPostBtn(data-id=post._id) Edit Post
+                                    button.deletePostBtn(data-id=post._id) Delete Post
+                        .postBody 
+                            p.postContent=post.content
+                            .postOptions
+                                button.createCommentBtn(data-id=post._id) Add comment
+                            if(post.comments.length>0)
+                                .postComments 
+                                    .commentsContainer 
+                                        for comment in post.comments 
+                                            .comment(id=comment._id) 
+                                                div
+                                                    span 
+                                                        strong 
+                                                            a(href!='/user/'+comment.author._id)=comment.author.username 
+                                                        | #{comment.createdOn} 
+                                                        span.commentText #{comment.text}
+                                                if (String(user._id) == String(comment.author._id))
+                                                    div
+                                                        button.editCommentBtn(data-id=comment._id) Edit Comment
+                                                        button.deleteCommentBtn(data-id=comment._id) Delete Comment
+                            else 
+                                p no comments yet
+        else 
+            p nothing to see here        
+        script(src='https://code.jquery.com/jquery-2.2.1.min.js', integrity='sha256-gvQgAFzTH6trSrAWoH1iPo9Xc96QxSZ3feW6kem+O00=', crossorigin='anonymous')
+        script.
+            $(document).ready(() => {
+                $('#createPostBtn').click(() => {
+                    $('#postForm').attr('data-method', 'post');
+                    $('#postDialog').show();
+                });
+
+                $('.editPostBtn').click(function () {
+                    $('#postForm').attr('data-method', 'put');
+                    const postId = $(this).attr('data-id');
+                    $("#postId").val(postId);
+                    const $post = $('#' + postId);
+                    $('#postDialog').show();
+                    $('#titleInput').val($post.find('.postTitle').text());
+                    $('#contentInput').val($post.find('.postContent').text());
+                });
+
+                $('#cancelPostBtn').click(() => {
+                    $('#postDialog').hide();
+                });
+
+                $('#postForm').submit((e) => {
+                    e.preventDefault();
+                    const method = $('#postForm').attr('data-method');
+                    const postId = $('#postId').val();
+                    $.ajax({
+                        type: method,
+                        url: (method === 'post') ? '/post' : '/post/' + postId,
+                        data: $('#postForm').serialize(),
+                        success: (res) => {
+                            $('#postDialog').hide();
+                            location.reload();
+                        },
+                    });
+                });
+
+                $('.createCommentBtn').click(function () {
+                    $('#commentForm').attr('data-method', 'post');
+                    $('#commentDialog').show();
+                    $('#commentPostId').val($(this).attr('data-id'));
+                });
+
+                $('#cancelCommentBtn').click(() => {
+                    $('#commentDialog').hide();
+                });
+
+                $('.editCommentBtn').click(function () {
+                    $('#commentForm').attr('data-method', 'put');
+                    const commentId = $(this).attr('data-id');
+                    $("#commentId").val(commentId);
+                    const $comment = $('#' + commentId);
+                    $('#commentDialog').show();
+                    $('#textInput').val($comment.find('.commentText').text());
+                });
+
+                $('#commentForm').submit((e) => {
+                    e.preventDefault();
+                    const method = $('#commentForm').attr('data-method');
+                    $.ajax({
+                        type: method,
+                        url: (method === 'post') ? '/comment' : '/comment/' + $('#commentId').val(),
+                        data: $('#commentForm').serialize(),
+                        success: (res) => {
+                            $('#commentDialog').hide();
+                            location.reload();
+                        },
+                    });
+                });
+                $('.deletePostBtn').click(function () {
+                        let postId = $(this).attr('data-id');
+                        if (confirm('Are you sure you want to delete this post?')) {
+                            $.ajax({
+                                type: 'delete',
+                                url: '/post/' + postId,
+                                success: (res) => {
+                                    location.reload();
+                                },
+                                error:(err)=>{
+                                    location.reload();
+                                }
+                            });
+                        }
+                });
+                $('.deleteCommentBtn').click(function () {
+                    let commentId = $(this).attr('data-id');
+                    if (confirm('Are you sure you want to delete this comment?')) {
+                        $.ajax({
+                            type: 'delete',
+                            url: '/comment/' + commentId,
+                            success: (res) => {
+                                location.reload();
+                            },
+                            error:(err)=>{
+                                location.reload();
+                            }
+                        });
+                    }
+                });
+                $('#logoutBtn').click(() => {
+                    $.ajax({
+                        type: 'delete',
+                        url: '/logout',
+                        success: (res) => {
+                            window.location.href = '/login';
+                        },
+                        error: (err) => {
+                            location.reload();
+                        },
+                    });
+                });
+            });
